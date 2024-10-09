@@ -1,5 +1,7 @@
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::time::Duration;
+use std::thread;
 
 fn main() -> std::io::Result<()> {
     // Bind the server to localhost:7878
@@ -12,6 +14,9 @@ fn main() -> std::io::Result<()> {
         match stream {
             Ok(mut stream) => {
                 println!("New connection: {}", stream.peer_addr()?);
+
+				println!("Taking a nap");
+				thread::sleep(Duration::from_secs(5));
 
                 // Create a buffer to store incoming data
                 let mut buffer = [0; 512];
