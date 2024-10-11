@@ -3,15 +3,30 @@ use std::net::TcpListener;
 
 const BUFFER_LEN: usize = 512;
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 enum RequestType {
     GET,
     POST,
     PUT,
 }
 
+#[derive(Debug)]
+struct Request {
+    req_type: RequestType,
+    path: String,
+    content_length: usize,
+    // TODO: headers
+}
+
+impl Request {
+    fn new(req_type: RequestType, path: String, content_length: usize) -> Self {
+        Self { req_type, path, content_length }
+    }
+}
+
 // Function to handle GET, POST, and PUT requests
-fn handle_request(request: &str) -> Result<(RequestType, String), String> {
+fn handle_request(request: &str) -> Result<Request, String> {
+    println!("{request}");
     let mut lines = request.lines();
     if let Some(request_line) = lines.next() {
         // The request line looks like: "GET / HTTP/1.1"
@@ -20,12 +35,26 @@ fn handle_request(request: &str) -> Result<(RequestType, String), String> {
             let method = parts[0];
             let path = parts[1];
 
-            match method {
-                "GET" => Ok((RequestType::GET, path.into())),
-                "POST" => Ok((RequestType::POST, path.into())),
-                "PUT" => Ok((RequestType::PUT, path.into())),
-                _ => Err("Unsupported method".to_string()),
+            let req_type = match method {
+                "GET" => RequestType::GET,
+                "POST" => RequestType::POST,
+                "PUT" => RequestType::PUT,
+                _ => return Err("Unsupported method".to_string()),
+            };
+
+            // find length
+            let mut content_length = 0;
+            while let Some(line) = lines.next() {
+                if line.starts_with("Content-Length: ") {
+                    let mut parts = line.split_whitespace();
+                    parts.next();
+                    let slen = parts.next().unwrap();
+                    content_length = slen.parse::<usize>().expect(&format!("Invalid Content-Length: {slen}"));
+                    break;
+                }
             }
+
+            Ok(Request::new(req_type, path.to_string(), content_length))
         } else {
             eprintln!("Bad Request: {request_line}");
             Err("Invalid Request format".to_string())
@@ -64,8 +93,8 @@ fn main() -> std::io::Result<()> {
 
                         match handle_request(&request) {
                             Ok(req) => {
-                                println!("Path: {}", req.1);
-                                if req.0 == RequestType::GET {
+                                dbg!(&req);
+                                if req.content_length == 0 {
                                     let response = get_200_response("OK");
                                     if let Err(e) = stream.write_all(response.as_bytes()) {
                                         eprintln!("Failed wrting to stream: {e}");
