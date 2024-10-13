@@ -88,3 +88,91 @@ Net I/O: 1.6 KB/s (0.0*10^6 bps)
 Errors: total 0 client-timo 0 socket-timo 0 connrefused 0 connreset 0
 Errors: fd-unavail 0 addrunavail 0 ftab-full 0 other 0
 ```
+
+## Thread Per Request
+
+### 2024-10-13
+
+```txt
+wrk -t12 -c400 -d30s -R1000 http://localhost:7878/
+Running 30s test @ http://localhost:7878/
+  12 threads and 400 connections
+  Thread calibration: mean lat.: 146.903ms, rate sampling interval: 677ms
+  Thread calibration: mean lat.: 148.502ms, rate sampling interval: 677ms
+  Thread calibration: mean lat.: 223.592ms, rate sampling interval: 489ms
+  Thread calibration: mean lat.: 225.972ms, rate sampling interval: 495ms
+  Thread calibration: mean lat.: 148.617ms, rate sampling interval: 676ms
+  Thread calibration: mean lat.: 224.491ms, rate sampling interval: 491ms
+  Thread calibration: mean lat.: 150.391ms, rate sampling interval: 677ms
+  Thread calibration: mean lat.: 151.370ms, rate sampling interval: 677ms
+  Thread calibration: mean lat.: 148.554ms, rate sampling interval: 676ms
+  Thread calibration: mean lat.: 150.835ms, rate sampling interval: 676ms
+  Thread calibration: mean lat.: 152.045ms, rate sampling interval: 677ms
+  Thread calibration: mean lat.: 156.264ms, rate sampling interval: 677ms
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    46.49ms  153.92ms 992.77ms   92.49%
+    Req/Sec    83.28     30.03   202.00     87.66%
+  29907 requests in 30.17s, 2.78MB read
+  Socket errors: connect 0, read 435, write 0, timeout 0
+Requests/sec:    991.39
+Transfer/sec:     94.45KB
+```
+
+## Asking ChatGPT: The server implementation using your thread pool was slower than creating a thread every time for each request. Why do you think so?
+
+The server implementation using a **thread pool** being slower than creating a new thread for each request could be caused by several factors related to the thread pool design, request handling, or resource contention. Here are some possible reasons:
+
+### 1. **Thread Pool Starvation or Overhead**:
+   - **Thread pool size**: If your thread pool has too few threads (e.g., fewer than the number of available CPU cores or incoming requests), tasks may be queued, causing delays. This creates a backlog of requests waiting for an available thread, which could lead to lower throughput compared to spawning a new thread for every request.
+   - **Task scheduling overhead**: When you submit tasks to a thread pool, there's overhead in queuing and scheduling jobs for worker threads. If the tasks are lightweight (e.g., small, short-lived HTTP requests), this scheduling overhead may outweigh the benefits of reusing threads.
+
+   **Solution**: Try increasing the number of threads in the pool to see if performance improves. Adjust the size of the pool to better match the workload.
+
+### 2. **Lock Contention on the Job Queue**:
+   - The thread pool implementation uses a **shared job queue** guarded by a `Mutex` to distribute work to worker threads. If multiple worker threads try to lock the job queue at the same time, they could block each other, causing delays in fetching tasks.
+   - If too many threads try to acquire the lock to pick up tasks from the queue, this contention can slow down the overall performance of the thread pool.
+
+   **Solution**: Reduce lock contention by exploring more efficient job distribution mechanisms, or if your workload is I/O bound, consider using **asynchronous programming** (via `async`/`await`) to avoid locking.
+
+### 3. **Overhead of Task Submission**:
+   - Submitting tasks to the pool involves sending jobs over a channel and locking the receiver (protected by `Mutex`). This overhead could become significant if you're handling very lightweight tasks like quick HTTP requests, where the cost of enqueuing the job could outweigh the benefit of reusing threads.
+   - By contrast, creating new threads every time incurs system-level overhead, but for small tasks, this might not be as costly compared to the thread pool's overhead in task management.
+
+   **Solution**: For very lightweight tasks, a thread-per-request model might perform better due to lower task submission overhead. Alternatively, optimizing the task submission mechanism (e.g., using lock-free queues) could help.
+
+### 4. **Thread Pool Warm-up Time**:
+   - If the thread pool starts with idle threads (or no pre-warmed threads), there might be an initial delay as threads are spawned and initialized to handle requests.
+   - In contrast, spawning a thread for every request might be faster initially, as there’s no need to manage a pool.
+
+   **Solution**: You could pre-warm the thread pool by initializing threads ahead of time or keeping them active to reduce any startup latency.
+
+### 5. **Resource Contention**:
+   - **CPU cores**: If your server runs on a multi-core machine, having too few threads (less than the number of CPU cores) in the pool can underutilize the available hardware. On the other hand, having too many threads can lead to context-switching overhead, especially if tasks are CPU-bound.
+   - **I/O-bound tasks**: If your tasks are I/O-bound (e.g., reading from or writing to the network), the pool size should typically be higher to ensure more threads can handle I/O requests concurrently while waiting for external resources.
+
+   **Solution**: Profile your server to understand whether it’s CPU-bound or I/O-bound and adjust the thread pool size accordingly. For I/O-bound workloads, a larger pool may help improve concurrency.
+
+### 6. **Inefficient Workload Distribution**:
+   - Depending on the workload, the pool might not be distributing jobs evenly among worker threads. Some threads could be over-utilized, while others remain idle, which leads to inefficient resource usage and lower performance.
+
+   **Solution**: Ensure that the workload is balanced across all threads in the pool, and profile the distribution of tasks among threads.
+
+### 7. **Thread Reuse Penalties**:
+   - The thread pool reuses threads to handle multiple tasks, but if tasks involve heavy I/O operations or blocking, keeping the thread alive may lead to resource contention (e.g., the thread holding onto system resources like file descriptors, memory, etc., for too long).
+   - Conversely, creating a new thread for each request ensures that the system releases resources as soon as the thread completes, which can sometimes be more efficient in certain situations.
+
+   **Solution**: Profile how threads behave with your workload and check if keeping threads alive in a pool causes resource contention or delays.
+
+---
+
+### **How to Diagnose and Fix the Issue**:
+1. **Profile the Server**: Use profiling tools (e.g., `perf`, `strace`, or the Rust `cargo flamegraph` tool) to analyze where the bottlenecks are. Check for things like:
+   - Lock contention.
+   - Idle threads in the pool.
+   - Queue wait times.
+
+2. **Experiment with Pool Size**: Increase the thread pool size and see how performance changes. Start by matching the number of threads to the number of CPU cores and then experiment with higher values if your workload is more I/O-bound.
+
+3. **Consider Asynchronous Programming**: If your workload is I/O-heavy, Rust’s `async` and `await` features might perform better than using a thread pool. Asynchronous programming models are more scalable for handling many concurrent I/O-bound requests, as they avoid blocking threads while waiting for I/O operations to complete.
+
+Let me know if you'd like help adjusting the thread pool design or trying asynchronous programming for the server!
