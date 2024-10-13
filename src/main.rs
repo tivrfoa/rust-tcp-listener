@@ -185,7 +185,7 @@ impl Request {
 
 fn handle_request(mut stream: TcpStream) {
     let request = Request::parse(&mut stream);
-    dbg!(request);
+    // dbg!(request);
 
     // Construct an HTTP/1.1 response
     let response = "HTTP/1.1 200 OK\r\n\
