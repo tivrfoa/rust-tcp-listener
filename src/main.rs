@@ -13,13 +13,13 @@ enum RequestType {
 
 #[derive(Debug)]
 enum HttpError {
-    BODY_BIGGER_LEN,
-    EMPTY_REQUEST,
-    WRITING_ERROR,
-    FAILED_PARSE_HEADERS,
-    FAILED_READ_STREAM,
-    FEW_CONTENT_LENGTH,
-    FLUSH_ERROR,
+    BodyBiggerLen,
+    EmptyRequest,
+    WritingError,
+    FailedParseHeaders,
+    FailedReadStream,
+    FewContentLength,
+    FlushError,
 }
 
 #[derive(Debug)]
@@ -55,7 +55,7 @@ impl Request {
             Ok(bytes_read) => {
                 if bytes_read == 0 {
                     eprintln!("Empty request?!");
-                    return Err(HttpError::EMPTY_REQUEST);
+                    return Err(HttpError::EmptyRequest);
                 }
                 // Convert buffer to string to get the request
                 let body_part = String::from_utf8_lossy(&buffer[..bytes_read]);
@@ -69,9 +69,9 @@ impl Request {
                         }
                         if let Err(e) = stream.flush() {
                             eprintln!("{e}");
-                            return Err(HttpError::FLUSH_ERROR);
+                            return Err(HttpError::FlushError);
                         }
-                        return Err(HttpError::FAILED_PARSE_HEADERS);
+                        return Err(HttpError::FailedParseHeaders);
                     }
                 };
 
@@ -79,11 +79,11 @@ impl Request {
                     let response = get_200_response("OK");
                     if let Err(e) = stream.write_all(response.as_bytes()) {
                         eprintln!("Failed wrting to stream: {e}");
-                        return Err(HttpError::WRITING_ERROR);
+                        return Err(HttpError::WritingError);
                     }
                     if let Err(e) = stream.flush() {
                         eprintln!("Failed to flush response: {e}");
-                        return Err(HttpError::FLUSH_ERROR);
+                        return Err(HttpError::FlushError);
                     }
                 } else {
                     // read body
@@ -99,19 +99,19 @@ impl Request {
                             Ok(bytes_read) => {
                                 eprintln!("Bytes read {bytes_read}");
                                 if bytes_read == 0 {
-                                    return Err(HttpError::FEW_CONTENT_LENGTH);
+                                    return Err(HttpError::FewContentLength);
                                 }
                                 body.push_str(&String::from_utf8_lossy(&buffer[..bytes_read]));
                             }
                             Err(e) => {
                                 eprintln!("rtb: Failed reading stream: {e}");
-                                return Err(HttpError::FAILED_READ_STREAM);
+                                return Err(HttpError::FailedReadStream);
                             }
                         }
                     }
                     if body.len() > request.content_length {
                         dbg!(body);
-                        return Err(HttpError::BODY_BIGGER_LEN);
+                        return Err(HttpError::BodyBiggerLen);
                     }
                     request.body = Some(body);
                 }
@@ -119,7 +119,7 @@ impl Request {
             }
             Err(e) => {
                 eprintln!("rt: Failed reading stream: {e}");
-                Err(HttpError::FAILED_READ_STREAM)
+                Err(HttpError::FailedReadStream)
             }
         }
     }
