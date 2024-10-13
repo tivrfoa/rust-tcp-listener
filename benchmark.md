@@ -1,5 +1,7 @@
 
-## 2024-10-13 - 001
+## 2024-10-13
+
+### 001
 
 Requests/sec:    206.72
 
@@ -26,6 +28,35 @@ Running 30s test @ http://localhost:7878/
   Socket errors: connect 0, read 387, write 0, timeout 0
 Requests/sec:    206.72
 Transfer/sec:     18.75KB
+```
+
+### 002
+
+Requests/sec: 993.61
+
+```txt
+wrk -t12 -c400 -d30s -R1000 http://localhost:7878/
+Running 30s test @ http://localhost:7878/
+  12 threads and 400 connections
+  Thread calibration: mean lat.: 0.987ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 1.026ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.959ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 1.025ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.994ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 1.001ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.970ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.971ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 3.977ms, rate sampling interval: 12ms
+  Thread calibration: mean lat.: 3.966ms, rate sampling interval: 13ms
+  Thread calibration: mean lat.: 0.973ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.933ms, rate sampling interval: 10ms
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     1.49ms    1.43ms  12.43ms   88.87%
+    Req/Sec    86.89    184.88     3.00k    95.58%
+  29974 requests in 30.17s, 2.66MB read
+  Socket errors: connect 0, read 1784, write 0, timeout 0
+Requests/sec:    993.61
+Transfer/sec:     90.34KB
 ```
 
 httperf
