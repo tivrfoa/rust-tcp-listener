@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::thread;
 
 const BUFFER_LEN: usize = 512;
 
@@ -182,35 +183,38 @@ impl Request {
     }
 }
 
-// Function to handle GET, POST, and PUT requests
+fn handle_request(mut stream: TcpStream) {
+    let request = Request::parse(&mut stream);
+    dbg!(request);
+
+    // Construct an HTTP/1.1 response
+    let response = "HTTP/1.1 200 OK\r\n\
+					Content-Type: text/html; charset=UTF-8\r\n\
+					Content-Length: 13\r\n\
+					Connection: close\r\n\r\n\
+					Hello, world!";
+
+    // Send the response back to the client
+    if let Err(e) = stream.write_all(response.as_bytes()) {
+        eprintln!("Failed wrting to stream: {e}");
+    }
+    if let Err(e) = stream.flush() {
+        eprintln!("hr: Failed to flush: {e}");
+    }
+}
 
 fn main() -> std::io::Result<()> {
-    // Bind the server to localhost:7878
     let listener = TcpListener::bind("127.0.0.1:7878")?;
-
     println!("Server listening on 127.0.0.1:7878...");
 
     // Accept incoming connections in a loop
     for stream in listener.incoming() {
         match stream {
-            Ok(mut stream) => {
+            Ok(stream) => {
                 println!("New connection: {}", stream.peer_addr()?);
-
-                let request = Request::parse(&mut stream);
-                dbg!(request);
-
-                // Construct an HTTP/1.1 response
-                let response = "HTTP/1.1 200 OK\r\n\
-                                Content-Type: text/html; charset=UTF-8\r\n\
-                                Content-Length: 13\r\n\
-                                Connection: close\r\n\r\n\
-                                Hello, world!";
-
-                // Send the response back to the client
-                if let Err(e) = stream.write_all(response.as_bytes()) {
-                    eprintln!("Failed wrting to stream: {e}");
-                }
-                stream.flush()?;
+                thread::spawn(|| {
+                    handle_request(stream);
+                });
             }
             Err(e) => {
                 eprintln!("Connection failed: {}", e);
@@ -225,10 +229,10 @@ fn get_200_response(arg: &str) -> String {
     let len = arg.len();
     format!(
         "HTTP/1.1 200 OK\r\n\
-                                Content-Type: text/html; charset=UTF-8\r\n\
-                                Content-Length: {len}\r\n\
-                                Connection: close\r\n\r\n\
-                                {arg}"
+		Content-Type: text/html; charset=UTF-8\r\n\
+		Content-Length: {len}\r\n\
+		Connection: close\r\n\r\n\
+		{arg}"
     )
 }
 
