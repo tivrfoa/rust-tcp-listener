@@ -47,10 +47,6 @@ impl Request {
         }
     }
 
-    fn read_body(&mut self, request_lines: &String, stream: &mut TcpStream) -> Self {
-        todo!()
-    }
-
     fn parse(stream: &mut TcpStream) -> Result<Self, HttpError> {
         // Create a buffer to store incoming data
         let mut buffer = [0; BUFFER_LEN];
