@@ -62,7 +62,7 @@ impl Request {
                     return Err(HttpError::EMPTY_REQUEST);
                 }
                 // Convert buffer to string to get the request
-                let body_part = String::from_utf8_lossy(&buffer[..]);
+                let body_part = String::from_utf8_lossy(&buffer[..bytes_read]);
                 let mut request_lines = body_part.lines();
                 let mut request = match Self::parse_headers(&mut request_lines) {
                     Ok(r) => r,
@@ -101,10 +101,11 @@ impl Request {
                     while body.len() < request.content_length {
                         match stream.read(&mut buffer) {
                             Ok(bytes_read) => {
+                                eprintln!("Bytes read {bytes_read}");
                                 if bytes_read == 0 {
                                     return Err(HttpError::FEW_CONTENT_LENGTH);
                                 }
-                                body.push_str(&String::from_utf8_lossy(&buffer[..]));
+                                body.push_str(&String::from_utf8_lossy(&buffer[..bytes_read]));
                             }
                             Err(e) => {
                                 eprintln!("rtb: Failed reading stream: {e}");
@@ -113,6 +114,7 @@ impl Request {
                         }
                     }
                     if body.len() > request.content_length {
+                        dbg!(body);
                         return Err(HttpError::BODY_BIGGER_LEN);
                     }
                     request.body = Some(body);
