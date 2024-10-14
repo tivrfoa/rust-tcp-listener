@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
-mod thread_pool1;
-use crate::thread_pool1::ThreadPool;
+mod thread_pool2;
+use crate::thread_pool2::ThreadPool;
 
 const BUFFER_LEN: usize = 512;
 
@@ -209,7 +209,7 @@ fn main() -> std::io::Result<()> {
     let listener = TcpListener::bind("127.0.0.1:7878")?;
     println!("Server listening on 127.0.0.1:7878...");
 
-    let pool = ThreadPool::new(8);
+    let mut pool = ThreadPool::new(8);
 
     // Accept incoming connections in a loop
     for stream in listener.incoming() {

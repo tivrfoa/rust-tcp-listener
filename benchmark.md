@@ -1,4 +1,34 @@
 
+
+## 2024-10-14
+
+### Each thread with its own channel
+
+```txt
+wrk -t12 -c400 -d30s -R1000 http://localhost:7878/
+Running 30s test @ http://localhost:7878/
+  12 threads and 400 connections
+  Thread calibration: mean lat.: 48.588ms, rate sampling interval: 556ms
+  Thread calibration: mean lat.: 221.939ms, rate sampling interval: 633ms
+  Thread calibration: mean lat.: 28.605ms, rate sampling interval: 72ms
+  Thread calibration: mean lat.: 33.447ms, rate sampling interval: 485ms
+  Thread calibration: mean lat.: 218.854ms, rate sampling interval: 629ms
+  Thread calibration: mean lat.: 229.369ms, rate sampling interval: 649ms
+  Thread calibration: mean lat.: 491.732ms, rate sampling interval: 2746ms
+  Thread calibration: mean lat.: 64.674ms, rate sampling interval: 615ms
+  Thread calibration: mean lat.: 47.378ms, rate sampling interval: 539ms
+  Thread calibration: mean lat.: 55.957ms, rate sampling interval: 585ms
+  Thread calibration: mean lat.: 395.852ms, rate sampling interval: 2375ms
+  Thread calibration: mean lat.: 227.524ms, rate sampling interval: 621ms
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    50.19ms  182.98ms   1.20s    96.17%
+    Req/Sec    83.15     60.65   211.00     64.25%
+  29674 requests in 30.17s, 2.78MB read
+  Socket errors: connect 0, read 182, write 0, timeout 0
+Requests/sec:    983.58
+Transfer/sec:     94.51KB
+```
+
 ## 2024-10-13
 
 ### 001
@@ -89,9 +119,7 @@ Errors: total 0 client-timo 0 socket-timo 0 connrefused 0 connreset 0
 Errors: fd-unavail 0 addrunavail 0 ftab-full 0 other 0
 ```
 
-## Thread Per Request
-
-### 2024-10-13
+### Thread Per Request
 
 ```txt
 wrk -t12 -c400 -d30s -R1000 http://localhost:7878/
