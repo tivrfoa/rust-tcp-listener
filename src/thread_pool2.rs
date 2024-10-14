@@ -11,24 +11,21 @@ struct Worker {
 
 impl Worker {
     fn new(id: usize) -> Self {
-		let (sender, receiver): (mpsc::Sender<Job>, mpsc::Receiver<Job>) = mpsc::channel();
+        let (sender, receiver): (mpsc::Sender<Job>, mpsc::Receiver<Job>) = mpsc::channel();
         thread::spawn(move || {
-			for job in receiver {
-				println!("Worker {id} got a job. Executing it.");
-				job();
-			}
+            for job in receiver {
+                println!("Worker {id} got a job. Executing it.");
+                job();
+            }
         });
 
-        Self {
-            id,
-            sender,
-        }
+        Self { id, sender }
     }
 }
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
-	next_idx: usize,
+    next_idx: usize,
 }
 
 impl ThreadPool {
@@ -40,17 +37,19 @@ impl ThreadPool {
             workers.push(Worker::new(id));
         }
 
-        Self { workers, next_idx: 0 }
+        Self {
+            workers,
+            next_idx: 0,
+        }
     }
 
     pub fn execute<F>(&mut self, f: F)
     where
         F: FnOnce() + Send + 'static,
     {
-		const LAST_ENTRY: usize = 0b111;
+        const LAST_ENTRY: usize = 0b111;
         let job = Box::new(f);
-		self.workers[self.next_idx].sender.send(job).unwrap();
-		self.next_idx = (self.next_idx + 1) & LAST_ENTRY;
+        self.workers[self.next_idx].sender.send(job).unwrap();
+        self.next_idx = (self.next_idx + 1) & LAST_ENTRY;
     }
 }
-

@@ -243,4 +243,3 @@ fn get_200_response(arg: &str) -> String {
 fn get_400_response(error_message: &str) -> String {
     format!("HTTP/1.1 400 Bad Request\r\n\r\n{}", error_message)
 }
-
