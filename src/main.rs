@@ -77,6 +77,7 @@ impl Request {
                 }
                 // Convert buffer to string to get the request
                 let body_part = String::from_utf8_lossy(&buffer[..bytes_read]);
+                println!("Request Header: {body_part}");
                 let mut request_lines = body_part.lines();
                 let mut request = match Self::parse_headers(&mut request_lines) {
                     Ok(r) => r,
@@ -87,17 +88,7 @@ impl Request {
                     }
                 };
 
-                if request.content_length == 0 {
-                    let response = get_200_response("OK");
-                    if let Err(e) = stream.write_all(response.as_bytes()) {
-                        eprintln!("Failed wrting to stream: {e}");
-                        return Err(HttpError::WritingError);
-                    }
-                    if let Err(e) = stream.flush() {
-                        eprintln!("Failed to flush response: {e}");
-                        return Err(HttpError::FlushError);
-                    }
-                } else {
+                if request.content_length > 0 {
                     // read body
                     let mut body = String::with_capacity(request.content_length);
 
@@ -195,6 +186,8 @@ impl Request {
 }
 
 fn handle_request(mut stream: TcpStream) {
+    // keep alive
+    // loop {
     let request = Request::parse(&mut stream);
     dbg!(&request);
 
@@ -208,19 +201,19 @@ fn handle_request(mut stream: TcpStream) {
     }
 
     // Construct an HTTP/1.1 response
-    let response = "HTTP/1.1 200 OK\r\n\
-					Content-Type: text/html; charset=UTF-8\r\n\
-					Content-Length: 13\r\n\
-					Connection: close\r\n\r\n\
-					Hello, world!";
-
+    let response = get_200_response("Hello World", true);
     // Send the response back to the client
     if let Err(e) = stream.write_all(response.as_bytes()) {
         eprintln!("Failed wrting to stream: {e}");
+        write_400_response(&mut stream, &e.to_string());
+        return;
     }
     if let Err(e) = stream.flush() {
         eprintln!("hr: Failed to flush: {e}");
+        write_400_response(&mut stream, &e.to_string());
+        return;
     }
+    //}
 }
 
 fn main() -> std::io::Result<()> {
@@ -245,15 +238,25 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn get_200_response(arg: &str) -> String {
+fn get_200_response(arg: &str, keep_alive: bool) -> String {
     let len = arg.len();
-    format!(
-        "HTTP/1.1 200 OK\r\n\
-		Content-Type: text/html; charset=UTF-8\r\n\
-		Content-Length: {len}\r\n\
-		Connection: close\r\n\r\n\
-		{arg}"
-    )
+    if keep_alive {
+        format!(
+            "HTTP/1.1 200 OK\r\n\
+			Content-Type: text/html; charset=UTF-8\r\n\
+			Content-Length: {len}\r\n\
+			Connection: keep-alive\r\n\r\n\
+			{arg}"
+        )
+    } else {
+        format!(
+            "HTTP/1.1 200 OK\r\n\
+			Content-Type: text/html; charset=UTF-8\r\n\
+			Content-Length: {len}\r\n\
+			Connection: close\r\n\r\n\
+			{arg}"
+        )
+    }
 }
 
 fn get_400_response(error_message: &str) -> String {
