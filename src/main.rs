@@ -45,6 +45,7 @@ struct Request {
     req_type: RequestType,
     path: String,
     content_length: usize,
+	keep_alive: bool,
     body: Option<String>,
     headers: HashMap<String, String>,
 }
@@ -60,6 +61,7 @@ impl Request {
             req_type,
             path,
             content_length,
+			keep_alive: false,
             body,
             headers: HashMap::new(),
         }
@@ -148,6 +150,10 @@ impl Request {
                         // finished parsing headers
                         return Ok(request);
                     }
+					if line == "Connection: keep-alive" {
+						request.keep_alive = true;
+						continue;
+					}
                     let Some((key, value)) = line.split_once(": ") else {
                         eprintln!("Invalid header: {line}");
                         return Err("Invalid header".to_string());
@@ -187,33 +193,37 @@ impl Request {
 
 fn handle_request(mut stream: TcpStream) {
     // keep alive
-    // loop {
-    let request = Request::parse(&mut stream);
-    dbg!(&request);
+    loop {
+		let request = Request::parse(&mut stream);
+		dbg!(&request);
 
-    match request {
-        Ok(req) => {}
-        Err(e) => {
-            // close connection
-            write_400_response(&mut stream, &e.to_string());
-            return;
-        }
-    }
+		let req = match request {
+			Ok(req) => req,
+			Err(e) => {
+				// close connection
+				write_400_response(&mut stream, &e.to_string());
+				return;
+			}
+		};
 
-    // Construct an HTTP/1.1 response
-    let response = get_200_response("Hello World", true);
-    // Send the response back to the client
-    if let Err(e) = stream.write_all(response.as_bytes()) {
-        eprintln!("Failed wrting to stream: {e}");
-        write_400_response(&mut stream, &e.to_string());
-        return;
-    }
-    if let Err(e) = stream.flush() {
-        eprintln!("hr: Failed to flush: {e}");
-        write_400_response(&mut stream, &e.to_string());
-        return;
-    }
-    //}
+		// Construct an HTTP/1.1 response
+		let response = get_200_response("Hello World", req.keep_alive);
+		// Send the response back to the client
+		if let Err(e) = stream.write_all(response.as_bytes()) {
+			eprintln!("Failed wrting to stream: {e}");
+			write_400_response(&mut stream, &e.to_string());
+			return;
+		}
+		if let Err(e) = stream.flush() {
+			eprintln!("hr: Failed to flush: {e}");
+			write_400_response(&mut stream, &e.to_string());
+			return;
+		}
+
+		if !req.keep_alive {
+			break;
+		}
+	}
 }
 
 fn main() -> std::io::Result<()> {
