@@ -5,7 +5,7 @@ use std::net::{TcpListener, TcpStream};
 // mod thread_pool3;
 // use crate::thread_pool3::ThreadPool;
 
-const BUFFER_LEN: usize = 512;
+const BUFFER_LEN: usize = 1 << 14; // 16384
 
 #[derive(Debug, PartialEq)]
 enum RequestType {
