@@ -29,6 +29,34 @@ Requests/sec:    983.58
 Transfer/sec:     94.51KB
 ```
 
+thread_pool3
+Passing TcpStream and handle_request function pointer to channel.
+
+```
+wrk -t12 -c400 -d30s -R1000 http://localhost:7878/
+Running 30s test @ http://localhost:7878/
+  12 threads and 400 connections
+  Thread calibration: mean lat.: 269.183ms, rate sampling interval: 733ms
+  Thread calibration: mean lat.: 251.589ms, rate sampling interval: 518ms
+  Thread calibration: mean lat.: 269.919ms, rate sampling interval: 732ms
+  Thread calibration: mean lat.: 271.118ms, rate sampling interval: 733ms
+  Thread calibration: mean lat.: 269.903ms, rate sampling interval: 732ms
+  Thread calibration: mean lat.: 252.128ms, rate sampling interval: 519ms
+  Thread calibration: mean lat.: 272.885ms, rate sampling interval: 733ms
+  Thread calibration: mean lat.: 275.242ms, rate sampling interval: 733ms
+  Thread calibration: mean lat.: 275.145ms, rate sampling interval: 734ms
+  Thread calibration: mean lat.: 273.282ms, rate sampling interval: 733ms
+  Thread calibration: mean lat.: 275.610ms, rate sampling interval: 734ms
+  Thread calibration: mean lat.: 275.419ms, rate sampling interval: 734ms
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   111.68ms  125.08ms 334.59ms   72.94%
+    Req/Sec    83.81     15.82   127.00     71.39%
+  29913 requests in 30.10s, 2.82MB read
+  Socket errors: connect 0, read 28, write 0, timeout 0
+Requests/sec:    993.83
+Transfer/sec:     95.99KB
+```
+
 ## 2024-10-13
 
 ### 001
