@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
@@ -18,11 +19,25 @@ enum RequestType {
 enum HttpError {
     BodyBiggerLen,
     EmptyRequest,
-    WritingError,
     FailedParseHeaders,
     FailedReadStream,
     FewContentLength,
     FlushError,
+    WritingError,
+}
+
+impl fmt::Display for HttpError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            HttpError::BodyBiggerLen => write!(f, "BodyBiggerLen"),
+            HttpError::EmptyRequest => write!(f, "EmptyRequest"),
+            HttpError::FailedParseHeaders => write!(f, "FailedParseHeaders"),
+            HttpError::FailedReadStream => write!(f, "FailedReadStream"),
+            HttpError::FewContentLength => write!(f, "FewContentLength"),
+            HttpError::FlushError => write!(f, "FlushError"),
+            HttpError::WritingError => write!(f, "WritingError"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -66,14 +81,8 @@ impl Request {
                 let mut request = match Self::parse_headers(&mut request_lines) {
                     Ok(r) => r,
                     Err(e) => {
-                        let response = get_400_response(&e);
-                        if let Err(e) = stream.write_all(response.as_bytes()) {
-                            eprintln!("Failed wrting to stream: {e}");
-                        }
-                        if let Err(e) = stream.flush() {
-                            eprintln!("{e}");
-                            return Err(HttpError::FlushError);
-                        }
+                        eprintln!("{e}");
+                        write_400_response(stream, &e);
                         return Err(HttpError::FailedParseHeaders);
                     }
                 };
@@ -187,7 +196,16 @@ impl Request {
 
 fn handle_request(mut stream: TcpStream) {
     let request = Request::parse(&mut stream);
-    dbg!(request);
+    dbg!(&request);
+
+    match request {
+        Ok(req) => {}
+        Err(e) => {
+            // close connection
+            write_400_response(&mut stream, &e.to_string());
+            return;
+        }
+    }
 
     // Construct an HTTP/1.1 response
     let response = "HTTP/1.1 200 OK\r\n\
@@ -240,4 +258,17 @@ fn get_200_response(arg: &str) -> String {
 
 fn get_400_response(error_message: &str) -> String {
     format!("HTTP/1.1 400 Bad Request\r\n\r\n{}", error_message)
+}
+
+fn write_400_response(stream: &mut TcpStream, e: &str) -> Result<(), HttpError> {
+    let response = get_400_response(e);
+    if let Err(e) = stream.write_all(response.as_bytes()) {
+        eprintln!("Failed wrting to stream: {e}");
+        return Err(HttpError::WritingError);
+    }
+    if let Err(e) = stream.flush() {
+        eprintln!("{e}");
+        return Err(HttpError::FlushError);
+    }
+    Ok(())
 }
