@@ -1,5 +1,33 @@
 
 
+## 004 - 2024-10-17
+
+Enable keep-alive by default. Only close if Connection: close is received.
+
+```txt
+wrk -t12 -c400 -d30s -R1000 http://localhost:7878/
+Running 30s test @ http://localhost:7878/
+  12 threads and 400 connections
+  Thread calibration: mean lat.: 0.985ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.983ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 1.804ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.992ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.968ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.960ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 2.050ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 1.003ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.940ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.951ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.937ms, rate sampling interval: 10ms
+  Thread calibration: mean lat.: 0.970ms, rate sampling interval: 10ms
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     1.10ms  559.72us   4.12ms   69.86%
+    Req/Sec    85.97    230.62     3.67k    99.03%
+  29974 requests in 30.17s, 3.26MB read
+Requests/sec:    993.57
+Transfer/sec:    110.61KB
+```
+
 ## 2024-10-14
 
 ### Each thread with its own channel
@@ -57,9 +85,7 @@ Requests/sec:    993.83
 Transfer/sec:     95.99KB
 ```
 
-## 2024-10-13
-
-### 001
+### 001 - 2024-10-13
 
 Requests/sec:    206.72
 

@@ -61,7 +61,7 @@ impl Request {
             req_type,
             path,
             content_length,
-            keep_alive: false,
+            keep_alive: true,
             body,
             headers: HashMap::new(),
         }
@@ -149,8 +149,8 @@ impl Request {
                         // finished parsing headers
                         return Ok(request);
                     }
-                    if line == "Connection: keep-alive" {
-                        request.keep_alive = true;
+                    if line == "Connection: close" {
+                        request.keep_alive = false;
                         continue;
                     }
                     let Some((key, value)) = line.split_once(": ") else {
