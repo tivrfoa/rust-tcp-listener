@@ -74,12 +74,11 @@ impl Request {
         match stream.read(&mut buffer) {
             Ok(bytes_read) => {
                 if bytes_read == 0 {
-                    eprintln!("Empty request?!");
                     return Err(HttpError::EmptyRequest);
                 }
                 // Convert buffer to string to get the request
                 let body_part = String::from_utf8_lossy(&buffer[..bytes_read]);
-                println!("Request Header: {body_part}");
+                // println!("Request Header: {body_part}");
                 let mut request_lines = body_part.lines();
                 let mut request = match Self::parse_headers(&mut request_lines) {
                     Ok(r) => r,
@@ -195,7 +194,7 @@ fn handle_request(mut stream: TcpStream) {
     // keep alive
     loop {
         let request = Request::parse(&mut stream);
-        dbg!(&request);
+        // dbg!(&request);
 
         let req = match request {
             Ok(req) => req,
@@ -211,8 +210,11 @@ fn handle_request(mut stream: TcpStream) {
                     return;
                 }
                 // close connection
-                write_400_response(&mut stream, &e.to_string());
-                return;
+                // write_400_response(&mut stream, &e.to_string());
+                // return;
+
+                // keep connection opened even on error, just for tests
+                continue;
             }
         };
 
